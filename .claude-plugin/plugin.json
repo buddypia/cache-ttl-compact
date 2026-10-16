@@ -1,0 +1,28 @@
+{
+  "name": "cache-ttl-compact",
+  "version": "0.1.0",
+  "description": "Shows a countdown to prompt-cache expiry in the status line and runs /compact while the cache is still warm",
+  "author": { "name": "buddypia" },
+  "license": "MIT",
+  "userConfig": {
+    "ttl": {
+      "type": "string",
+      "title": "Cache TTL",
+      "description": "Prompt-cache TTL (usually 1h; 5m when usage goes into overage)",
+      "default": "1h",
+      "options": ["1h", "5m"]
+    },
+    "marginSeconds": {
+      "type": "number",
+      "title": "Compact margin (seconds)",
+      "description": "How many seconds before expiry to compact",
+      "default": 180
+    },
+    "minContextTokens": {
+      "type": "number",
+      "title": "Min context tokens",
+      "description": "Skip compaction below this context size (re-caching it is cheap)",
+      "default": 30000
+    }
+  }
+}

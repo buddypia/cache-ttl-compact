@@ -1,0 +1,6 @@
+{
+  "name": "cache-ttl-compact",
+  "owner": { "name": "buddypia" },
+  "metadata": { "description": "Prompt-cache expiry countdown and auto-compact for Claude Code" },
+  "plugins": [{ "name": "cache-ttl-compact", "source": "./" }]
+}
