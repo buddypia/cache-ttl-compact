@@ -14,22 +14,30 @@ Claude Code caches the conversation on every API request. The cache lives for a 
 
 This plugin counts down from your last request. Just before the cache expires, if the session is idle, it compacts the conversation while the cache is still warm. When you come back, you start from a small summary instead of a cold, full-size context.
 
+Claude Code 2.1.299 and later does part of this on its own: its idle compaction compacts a conversation of 200K tokens or more, idle for about 54 minutes, before its 1h cache expires. The plugin leaves those conversations to it and compacts only what idle compaction does not cover:
+
+- contexts below idle compaction's minimum (200K tokens, or `CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS`) and above `minContextTokens`
+- the 5m TTL
+- `"idleCompaction": false`, or Claude Code before 2.1.299
+
+The terminal has no countdown of its own, so the plugin shows it in every case.
+
 ## What it does
 
-With the defaults (TTL `1h`, margin `180` seconds):
+With a 1h TTL and the default margin (180 seconds):
 
 | Time since the last request | Status line | Action |
 | --- | --- | --- |
 | 1 s | `cache 59:59` | Updates every second |
-| 57 min | `cache 3:00` | Compacts if the session is idle and the context is at least 30k tokens, and shows a toast |
+| 57 min | `cache 3:00` | Compacts if the session is idle, the context is at least 30k tokens and idle compaction does not cover it, and shows a toast |
 | After compacting | (cleared) | Nothing more until your next message |
 | 60 min, if it did not compact | `cache expired` | Stays until your next message |
 
 - The countdown starts over on every request from the main conversation, including each tool-use step inside a turn. Subagent requests are ignored.
 - It never compacts while a turn is running. If a long turn ends inside the margin, it compacts right then.
 - It tries once per cache period. A skipped or failed compaction is logged and not retried every second.
-- Any compaction (`/compact`, auto-compact, another plugin) clears the countdown until the next request.
-- The compaction keeps the task in progress, changed files, design decisions with their reasons, and open items, and writes the summary in the language of the conversation.
+- Any compaction (`/compact`, auto-compact, idle compaction, another plugin) clears the countdown until the next request.
+- The compaction keeps the task in progress, changed files, design decisions with their reasons, and open items, and writes the summary in the language of the conversation. The `instructions` option replaces this.
 
 The line appears under the prompt, beside Claude Code's own notices, as `⚠ cache-ttl-compact: cache 59:37`. It does not replace your `statusLine` command.
 
@@ -61,7 +69,7 @@ Change them in `/config`, or under `pluginConfigs` in `~/.claude/settings.json`:
 {
   "pluginConfigs": {
     "cache-ttl-compact": {
-      "options": { "ttl": "1h", "marginSeconds": 180, "minContextTokens": 30000 }
+      "options": { "ttl": "auto", "marginSeconds": 0, "minContextTokens": 30000, "instructions": "" }
     }
   }
 }
@@ -69,15 +77,17 @@ Change them in `/config`, or under `pluginConfigs` in `~/.claude/settings.json`:
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `ttl` | `1h` | Prompt-cache TTL: `1h` or `5m` |
-| `marginSeconds` | `180` | How many seconds before expiry to compact |
+| `ttl` | `auto` | Prompt-cache TTL: `auto`, `1h` or `5m`. `auto` is `5m` when `FORCE_PROMPT_CACHING_5M` is set, else `1h` |
+| `marginSeconds` | `0` | How many seconds before expiry to compact; `0` uses the TTL's own margin (180 for `1h`, 60 for `5m`) |
 | `minContextTokens` | `30000` | Skip compaction below this context size, since re-caching a small context is cheap |
+| `instructions` | (empty) | What the compaction summary keeps; empty uses the built-in instructions above |
 
 The screenshots were taken with `ttl: 5m` and `marginSeconds: 280`, so compaction fires 20 seconds after the request.
 
 ## Limitations
 
-- A plugin cannot read the cache TTL, so the countdown uses the `ttl` option. If your TTL drops to 5 minutes (for example, when usage goes into overage), switch `ttl` to `5m`; with `5m`, a `marginSeconds` around `60` works better than the default.
+- A plugin cannot read the cache TTL, so the countdown uses the `ttl` option. `auto` sees only `FORCE_PROMPT_CACHING_5M`: if your TTL is 5 minutes for another reason (an API key without `ENABLE_PROMPT_CACHING_1H`, or usage in overage), set `ttl` to `5m`.
+- Which conversations idle compaction covers comes from Claude Code's changelog (2.1.299). If a later release changes it, the plugin may compact a conversation idle compaction would also have taken, or leave one it does not.
 - The countdown is an estimate from the time each request was sent. It cannot see the server-side cache itself.
 
 ## Development

@@ -1,28 +1,34 @@
 {
   "name": "cache-ttl-compact",
-  "version": "0.1.0",
-  "description": "Shows a countdown to prompt-cache expiry in the status line and runs /compact while the cache is still warm",
+  "version": "0.2.0",
+  "description": "Shows a countdown to prompt-cache expiry in the status line and runs /compact while the cache is still warm, where Claude Code's idle compaction does not",
   "author": { "name": "buddypia" },
   "license": "MIT",
   "userConfig": {
     "ttl": {
       "type": "string",
       "title": "Cache TTL",
-      "description": "Prompt-cache TTL (usually 1h; 5m when usage goes into overage)",
-      "default": "1h",
-      "options": ["1h", "5m"]
+      "description": "Prompt-cache TTL; auto is 5m when FORCE_PROMPT_CACHING_5M is set, else 1h",
+      "default": "auto",
+      "options": ["auto", "1h", "5m"]
     },
     "marginSeconds": {
       "type": "number",
       "title": "Compact margin (seconds)",
-      "description": "How many seconds before expiry to compact",
-      "default": 180
+      "description": "How many seconds before expiry to compact; 0 uses the TTL's own (180 for 1h, 60 for 5m)",
+      "default": 0
     },
     "minContextTokens": {
       "type": "number",
       "title": "Min context tokens",
       "description": "Skip compaction below this context size (re-caching it is cheap)",
       "default": 30000
+    },
+    "instructions": {
+      "type": "string",
+      "title": "Compaction instructions",
+      "description": "What the summary keeps; empty uses the built-in instructions",
+      "default": ""
     }
   }
 }
